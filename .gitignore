@@ -1,0 +1,5 @@
+# ignore zip file
+*.zip
+
+# ignore "waze_data" folder
+waze_data/
