@@ -1,5 +1,5 @@
-# ignore zip file
+# ignore zip files
 *.zip
 
-# ignore "waze_data" folder
-waze_data/
+# ignore csv files
+*.csv
