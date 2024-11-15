@@ -96,7 +96,7 @@ path_zip = os.path.join(
 with zipfile.ZipFile(path_zip, "r") as zip_data:
     zip_data.extractall(base)
 ```
-<!--Attribution: Method ".ZipFile()" referring to Perplexity (https://www.perplexity.ai/search/how-to-unzip-a-zip-file-in-the-USeP9tjyQNiVvD50H4LcUw) -->
+<!--Attribution: Method ".ZipFile()" referring to Perplexity (https://www.perplexity.ai/search/how-to-unzip-a-zip-file-in-the-USeP9tjyQNiVvD50H4LcUw)-->
 
 ```{python}
 # Load the sample dataset into a DataFrame
@@ -163,7 +163,7 @@ chart_null = alt.Chart(summary_df_waze).mark_bar().encode(
             domain=["NULL", "non_NULL"],
             range=["red", "yellowgreen"]
           )),
-    order = alt.Order("suborder", sort="ascending")
+    alt.Order("suborder", sort="ascending")
 ).properties(
     title = "Number of NULLs in each columns",
     height = 300,
@@ -188,12 +188,34 @@ chart_null = chart_null + text_null
 
 display(chart_null)
 ```
+<!--Attribution: Method "alt.Order()" and the way or sorting referring to Perplexity (https://www.perplexity.ai/search/how-to-sort-the-piles-of-stack-MVWdMltYSCKbvcpn8X_Kcw)-->
+
 
 From the result above, the variables which have the NULL is "nThumbsUp", "street" and "subtype", with the highest share of 99.8% for "nThumbsUp".
 
 3. 
 
 ```{python}
+# Print Unique types and subtypes
+type_unique = df_waze["type"].unique().tolist()
+subtype_unique = df_waze["subtype"].unique().tolist()
+
+print(f"type: {type_unique}")
+print(f"subtype: {subtype_unique}")
+
+# Define a function to check whether a type include NA subtype
+def subtype_isna(type):
+    df_waze_subset = df_waze[df_waze["type"] == type]
+    subtype_unique_subset = df_waze_subset["subtype"].unique().tolist()
+    if np.nan in subtype_unique_subset:
+        return True
+    else:
+        return False
+# Apply the function in list comprehension
+type_subtype_isna = [type for type in type_unique if subtype_isna(type)]
+print(f"types which includes subtype nan: {type_subtype_isna}")
+
+# Can identify sub-subtype?
 
 ```
 
