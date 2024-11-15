@@ -1,6 +1,6 @@
 ---
 title: "Problem Set 6 - Waze Shiny Dashboard"
-author: "Peter Ganong, Maggie Shi, and Andre Oviedo"
+author: "Hiroaki Kurachi"
 date: today
 format: 
   pdf:
@@ -24,14 +24,14 @@ We use (`*`) to indicate a problem that we think might be time consuming.
 # Steps to submit (10 points on PS6) {-}
 
 1. "This submission is my work alone and complies with the 30538 integrity
-policy." Add your initials to indicate your agreement: \*\*\_\_\*\*
-2. "I have uploaded the names of anyone I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  \*\*\_\_\*\* (2 point)
+policy." Add your initials to indicate your agreement: \*\*\HK\*\*
+2. "I have uploaded the names of anyone I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  \*\*\HK\*\* (2 point)
 3. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
 
 4. Before starting the problem set, make sure to read and agree to the terms of data usage for the Waze data [here](https://canvas.uchicago.edu/courses/59054/quizzes/130617).
 
 5. Knit your `ps6.qmd` as a pdf document and name it `ps6.pdf`.
-6. Submit your `ps6.qmd`, `ps6.pdf`, `requirements.txt`, and all created folders (we will create three Shiny apps so you will have at least three additional folders) to the gradescope repo assignment (5 points).
+6. Push your `ps6.qmd`, `ps6.pdf`, `requirements.txt`, and all created folders (we will create three Shiny apps so you will have at least three additional folders) to your Github repo (5 points). It is fine to use Github Desktop.
 7. Submit `ps6.pdf` and also link your Github repo via Gradescope (5 points)
 8. Tag your submission in Gradescope. For the Code Style part (10 points) please tag the whole correspondingsection for the code style rubric.
 
@@ -67,6 +67,8 @@ print_file_contents("./top_alerts_map_byhour/app.py") # Change accordingly
 #| echo: false
 
 # Import required packages.
+import zipfile
+import os
 import pandas as pd
 import altair as alt 
 import pandas as pd
@@ -84,14 +86,110 @@ import json
 1. 
 
 ```{python}
+# Unzip the datasets
+base = (r"C:\Users\hkura\Documents\Uchicago\04 2024 Autumn\Python2\problem-set-6-hirokurachi")
+path_zip = os.path.join(
+    base, 
+    "waze_data.zip"
+)
 
+with zipfile.ZipFile(path_zip, "r") as zip_data:
+    zip_data.extractall(base)
+```
+<!--Attribution: Method ".ZipFile()" referring to Perplexity (https://www.perplexity.ai/search/how-to-unzip-a-zip-file-in-the-USeP9tjyQNiVvD50H4LcUw) -->
+
+```{python}
+# Load the sample dataset into a DataFrame
+path_sample = os.path.join(
+    base,
+    "waze_data_sample.csv"
+)
+
+df_sample = pd.read_csv(path_sample)
+
+# Summarize datatype for each columns
+summary_df_sample = pd.DataFrame(df_sample.dtypes).reset_index()
+summary_df_sample.columns = ["columns", "datatypes"]
+
+# Ignore the last three columns
+summary_df_sample = summary_df_sample.iloc[0:13]
+
+# Fill the datatype column with the altair datatypes
+# print(df_sample.head())
+alt_types = ["Quantitative", "Nominal", "Quantitative", "Quantitative", "Nominal", "Nominal/Ordinal", "Nominal", "Nominal", "Nominal", "Nominal", "Quantitative", "Quantitative", "Ordinal"]
+summary_df_sample["datatypes"] = alt_types
+
+print(summary_df_sample)
 ```
 
 2. 
 
 ```{python}
+# Load the total dataset
+path_waze = os.path.join(
+    base,
+    "waze_data.csv"
+)
+df_waze = pd.read_csv(path_waze)
 
+# Count the number of Nulls and non-Nulls in each column
+null_number = [len(df_waze[df_waze[x].isna()]) for x in df_waze.columns]
+non_null_number = [len(df_waze[~df_waze[x].isna()]) for x in df_waze.columns]
+
+# Summarize the number of observations fo each columns, with categories of NULL/missing or not
+summary_df_waze = dict(zip(["Columns", "NULL", "non_NULL"], [df_waze.columns, null_number, non_null_number]))
+summary_df_waze = pd.DataFrame(summary_df_waze)
+
+# Mutate the NULL share
+summary_df_waze["NULL_share"] = summary_df_waze["NULL"] / len(df_waze)
+
+print(summary_df_waze)
+
+# Melt the df to specify category (NULL/non-NULL) and whose number for each columns(column names)
+summary_df_waze = summary_df_waze.melt(
+    id_vars = "Columns",
+    var_name = "NULL_or_not",
+    value_name = "Number"
+)
+
+# Plot a stacked bar of the number of observations for each columns, with categories of NULL/missing or not
+summary_df_waze["suborder"] = summary_df_waze["NULL_or_not"].map({"NULL":-1, "non_NULL":1})
+chart_null = alt.Chart(summary_df_waze).mark_bar().encode(
+    alt.X("Columns:N"),
+    alt.Y("Number:Q"),
+    alt.Color("NULL_or_not:N", 
+        legend = alt.Legend(title = "NULL or not"),
+        scale = alt.Scale(
+            domain=["NULL", "non_NULL"],
+            range=["red", "yellowgreen"]
+          )),
+    order = alt.Order("suborder", sort="ascending")
+).properties(
+    title = "Number of NULLs in each columns",
+    height = 300,
+    width = 300
+)
+
+# Add the numbers of NULL as texts
+text_null = alt.Chart(summary_df_waze).mark_text(
+    angle = 45
+).encode(
+    x = "Columns:N",
+    text = "Number:N"
+).properties(
+    height = 300,
+    width = 300
+).transform_filter(
+    "datum.NULL_or_not == 'NULL'"
+)
+
+# Integrate the bar chart and the text
+chart_null = chart_null + text_null
+
+display(chart_null)
 ```
+
+From the result above, the variables which have the NULL is "nThumbsUp", "street" and "subtype", with the highest share of 99.8% for "nThumbsUp".
 
 3. 
 
