@@ -196,30 +196,171 @@ From the result above, the variables which have the NULL is "nThumbsUp", "street
 3. 
 
 ```{python}
-# Print Unique types and subtypes
+# Extract Unique types and subtypes
 type_unique = df_waze["type"].unique().tolist()
-subtype_unique = df_waze["subtype"].unique().tolist()
+subtype_unique_origin = df_waze["subtype"].unique().tolist()
 
 print(f"type: {type_unique}")
-print(f"subtype: {subtype_unique}")
+print(f"subtype: {subtype_unique_origin}")
 
 # Define a function to check whether a type include NA subtype
 def subtype_isna(type):
-    df_waze_subset = df_waze[df_waze["type"] == type]
-    subtype_unique_subset = df_waze_subset["subtype"].unique().tolist()
-    if np.nan in subtype_unique_subset:
+    df_waze_bytype = df_waze[df_waze["type"] == type]
+    subtype_unique_bytype = df_waze_bytype["subtype"].unique().tolist()
+    if np.nan in subtype_unique_bytype:
         return True
     else:
         return False
+
 # Apply the function in list comprehension
-type_subtype_isna = [type for type in type_unique if subtype_isna(type)]
-print(f"types which includes subtype nan: {type_subtype_isna}")
-
-# Can identify sub-subtype?
-
+type_include_nan = [type for type in type_unique if subtype_isna(type)]
+print(f"types which includes subtype nan: {type_include_nan}")
 ```
 
+Then, we would find out whether the subtypes in each type are informative for their sub-subtypes, by extracting subtype names (including sub-subtype names or not) removing type names from them (This time, we would exclude nan from the checking process).
+
+```{python}
+# Remove heads (types) from each subtypes to isolate subtypes from types
+# Define function to remove head
+def remove_head(df, heads, basecol):
+    result = {}
+    for head in heads:
+        df_subset = df[df[basecol].str.contains(head, na = False)]
+        subtype_unique_subset = df_subset["subtype"].unique().tolist()
+        subtype_unique_subset = [x.replace(f"{head}_", "") for x in subtype_unique_subset if isinstance(x, str)]
+        result[head] = subtype_unique_subset
+    return result
+# Isolate subtypes from types by the function
+dic_subtype_unique_isolated = remove_head(df_waze, type_unique, "type")
+
+print(dic_subtype_unique_isolated)
+```
+
+The result above implies that types "HAZARD" would include sub-subtypes as well as subtypes, because the name of subtypes has some common headers such as "ON_ROAD" or "WEATHER" - which would be the subtype names, while the remainings are the sub-subtype names.
+
+On the other hand, other 3 types doesn't have such characteristics in their subtype names, implying not having sub-subtypes.
+
+Now, the hierarchy of types are like below, excluding nan in each type:
+
+- Jam
+
+    - Heavy traffic
+
+    - Moderate traffic
+
+    - Stand still traffic
+
+    - Light traffic
+
+- Accident
+
+    - Major
+
+    - Minor
+
+- Road Closed
+
+    - Event
+
+    - Construction
+
+    - Hazard
+
+- Hazard
+
+    - On Road
+
+        - (no sub-subtype)
+
+        - Car stopped
+
+        - Construction
+
+        - Emergency vehicle
+
+        - Ice
+
+        - Object
+
+        - Pot hole
+
+        - Traffic light fault
+
+        - Lane closed
+
+        - Road kill
+
+    - On Shoulder
+
+        - (no sub-subtype)
+
+        - Car stopped
+
+        - Animals
+
+        - Missing sign
+
+    - Weather
+
+        - (no sub-subtype)
+
+        - Flood
+
+        - Fog
+
+        - Heavy snow
+
+        - Hail
+
+
+Finally, we need to keep the NA subtypes, because they count up to 96086 observations with up to about 12.3% share among whole observations, suggesting that ignoring them would affect our findings (especially on total values) significantly. On contrary, by explicitly saying them "Unclassified", we can grasp the whole status of the data, and it is still useful to know how the dataset successfully includes incomplete data.
+
 4. 
+
+```{python}
+# Create base df
+df_crosswalk = df_waze.copy()
+
+# Extract unique subtypes
+def extract_subtype(dic):
+    result = []
+    for key in dic.keys():
+        if key in ["JAM", "ACCIDENT", "ROAD_CLOSED"]:
+            add = dic[key]
+            result.append(add)
+        elif key == "HAZARD":
+            add = ["ON_ROAD", "ON_SHOULDER", "WEATHER"]
+            result.append(add)
+    return result
+subtype_unique = extract_subtype(dic_subtype_unique_isolated)
+
+# Isolate sub-subtypes from subtypes
+# Parallel to isolating subtypes; remove heads (extracted subtypes) from each subtypes
+df_crosswalk["updated_subsubtype"] = [remove_head(df_crosswalk, x, "subtype") for x in df_crosswalk["subtype"]]
+
+
+
+df_crosswalk["updated_type"] = [x.replace("_", " ").capitalize() for x in df_crosswalk["type"]]
+df_crosswalk
+
+
+df_waze.groupby(["type", "subtype"]).size().reset_index()
+
+print(df_crosswalk)
+
+df_crosswalk["updated_subtype"] = [x.replace("_", " ").capitalize() for x in subtype_unique]
+
+
+df_crosswalk = pd.DataFrame({
+    "type" : type_unique + [np.nan],
+    "subtype" : subtype_unique_origin + [np.nan],
+    "updated_type" : [x.replace("_", " ").capitalize() for x in type_unique],
+    "updated_subtype" : [x.replace("_", " ").capitalize() for x in subtype_unique],
+    "updated_subsubtype" : [x.replace("_", " ").capitalize() for x in subsubtype_unique]
+})
+
+
+```
 
 1. 
 ```{python}
