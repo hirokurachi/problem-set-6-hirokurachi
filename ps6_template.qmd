@@ -75,6 +75,7 @@ import pandas as pd
 from datetime import date
 import numpy as np
 alt.data_transformers.disable_max_rows() 
+import re
 
 import json
 ```
@@ -393,48 +394,49 @@ d.
 
 ```
 
-1. 
-```{python}
-
-```
-
-2. 
-
-```{python}
-
-```
-
-3. 
-
-```{python}
-
-```
-
-4. 
-
-```{python}
-
-```
-
-
 # App #1: Top Location by Alert Type Dashboard (30 points){-}
 
 1. 
 
 a. 
 ```{python}
+# Split the strings column "geo" at every white-space character
+base_list_geo = df_waze_updated["geo"].map(lambda x: re.split("\s", x))
 
+# Convert the series of lists into df
+df_geo = pd.DataFrame(base_list_geo.tolist(), columns = ["latitude", "longitude"])
+
+# Remove redundant strings from the columns
+df_geo["latitude"] = df_geo["latitude"].map(lambda x: float(x.replace("POINT(", "")))
+df_geo["longitude"] = df_geo["longitude"].map(lambda x: float(x.replace(")", "")))
+
+# Join the df into the base df
+df_waze_updated = df_waze_updated.join(df_geo)
 ```
+<!--Attribution: Method "re.split()" referring to W3Schools (https://www.w3schools.com/python/python_regex.asp#split)-->
 
 b. 
 ```{python}
+# Bin the latitude and longitude variables
+df_waze_updated[["latitude", "longitude"]] = df_waze_updated[["latitude", "longitude"]].applymap(lambda x: round(x, 2))
 
+# Count each group by latitude and longitude
+summary_df_geo = df_waze_updated.groupby(["latitude", "longitude"]).size().reset_index()
+summary_df_geo.columns = ["latitude", "longitude", "count"]
+summary_df_geo = summary_df_geo.sort_values("count", ascending = False)
+
+print(summary_df_geo.head(1))
 ```
 
+Thus, the set of binned latitude-longitude combination above has the greatest number of observations in the overall dataset.
 
 c. 
 ```{python}
+#####NEED TO FIX#############
+# Group and filter top 10 from the sorted df by type and subtype
+df_top_alerts_maps = df_top_alerts_maps.sort_values("count", ascending = False).groupby(["updated_type", "updated_subtype"]).head(10).reset_index(drop = True)
 
+df_top_alerts_maps.to_csv(r"top_alerts_map\top_alerts_map.csv")
 ```
 
 d. 
