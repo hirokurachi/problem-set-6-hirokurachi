@@ -432,14 +432,19 @@ Thus, the set of binned latitude-longitude combination above has the greatest nu
 
 c. 
 ```{python}
-#####NEED TO FIX#############
+# Summarize the df by type, subtype, latitude and longitude
+df_top_alerts_maps = df_waze_updated.groupby(["updated_type", "updated_subtype", "latitude", "longitude"]).size().reset_index()
+df_top_alerts_maps.columns = ["updated_type", "updated_subtype", "latitude", "longitude", "count"]
+
 # Group and filter top 10 from the sorted df by type and subtype
 df_top_alerts_maps = df_top_alerts_maps.sort_values("count", ascending = False).groupby(["updated_type", "updated_subtype"]).head(10).reset_index(drop = True)
 
 df_top_alerts_maps.to_csv(r"top_alerts_map\top_alerts_map.csv")
 ```
 
-d. 
+The level of aggregation is . And the DataFrame has 155 rows.
+
+2. 
 ```{python}
 
 ```
