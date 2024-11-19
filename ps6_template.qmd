@@ -188,7 +188,7 @@ text_null = alt.Chart(summary_df_waze).mark_text(
 # Integrate the bar chart and the text
 chart_null = chart_null + text_null
 
-display(chart_null)
+chart_null.show()
 ```
 <!--Attribution: Method "alt.Order()" and the way or sorting referring to Perplexity (https://www.perplexity.ai/search/how-to-sort-the-piles-of-stack-MVWdMltYSCKbvcpn8X_Kcw)-->
 
@@ -449,8 +449,8 @@ The level of aggregation is . And the DataFrame has 155 rows.
 ```{python}
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases
 chart_alert = alt.Chart(df_top_alerts_maps).mark_point().encode(
-    alt.X("longitude:Q", scale = alt.Scale(zero = False, domain = [41.60, 42.00])),
-    alt.Y("latitude:Q", scale = alt.Scale(zero = False, domain = [-87.80, -87.60])),
+    alt.X("longitude:Q", scale = alt.Scale(domain = [41.60, 42.00])),
+    alt.Y("latitude:Q", scale = alt.Scale(domain = [-87.80, -87.60])),
     alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
 ).properties(
     title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
@@ -499,7 +499,27 @@ geo_data = alt.Data(values = chicago_geojson["features"])
 4. 
 
 ```{python}
+chart_map = alt.Chart(geo_data).mark_geoshape(
+    fill = "lightgray",
+    stroke = "white"
+).project("albersUsa")
 
+# Redefine the scatterplot
+# chart_alert = alt.Chart(df_top_alerts_maps).mark_point().encode(
+#     longitude = "longitude:Q",
+#     latitude = "latitude:Q",
+#     size = alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
+# ).properties(
+#     title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
+#     height = 300,
+#     width = 300
+# ).transform_filter(
+#     "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
+# )
+
+chart_alert_map = chart_map + chart_alert
+
+chart_alert_map.show()
 ```
 
 5. 
