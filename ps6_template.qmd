@@ -76,6 +76,7 @@ from datetime import date
 import numpy as np
 alt.data_transformers.disable_max_rows() 
 import re
+import requests
 
 import json
 ```
@@ -446,7 +447,20 @@ The level of aggregation is . And the DataFrame has 155 rows.
 
 2. 
 ```{python}
+# Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases
+chart_alert = alt.Chart(df_top_alerts_maps).mark_point().encode(
+    alt.X("longitude:Q", scale = alt.Scale(zero = False, domain = [41.60, 42.00])),
+    alt.Y("latitude:Q", scale = alt.Scale(zero = False, domain = [-87.80, -87.60])),
+    alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
+).properties(
+    title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
+    height = 300,
+    width = 300
+).transform_filter(
+    "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
+)
 
+display(chart_alert)
 ```
 
 3. 
@@ -454,21 +468,32 @@ The level of aggregation is . And the DataFrame has 155 rows.
 a. 
 
 ```{python}
+# Download and save from the url
+url_geojson = "https://data.cityofchicago.org/api/geospatial/bbvz-uum9?method=export&format=GeoJSON"
 
+response = requests.get(url_geojson)
+data = response.json()
+
+# Save as a geojson file
+path_json = os.path.join(
+    base, 
+    r"top_alerts_map\chicago-boundaries.geojson"
+)
+
+with open(path_json, "w") as f:
+    json.dump(data, f)
 ```
-    
+<!--Attribution: method ".json" referring to Real Python (https://realpython.com/python-requests/)-->
+
+<!--Attribution: json package referring to Perplexity (https://www.perplexity.ai/search/methods-in-json-package-for-sa-KX2RBtBjTLasvWgV9UzWgw)-->    
 
 b. 
 ```{python}
-# MODIFY ACCORDINGLY
-file_path = "./top_alerts_map/chicago-boundaries.geojson"
-#----
-
-with open(file_path) as f:
+# Load the geojson file
+with open(path_json) as f:
     chicago_geojson = json.load(f)
 
-geo_data = alt.Data(values=chicago_geojson["features"])
-
+geo_data = alt.Data(values = chicago_geojson["features"])
 ```
 
 4. 
