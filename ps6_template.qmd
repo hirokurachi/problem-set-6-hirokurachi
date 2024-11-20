@@ -117,8 +117,7 @@ summary_df_sample.columns = ["columns", "datatypes"]
 summary_df_sample = summary_df_sample.iloc[0:13]
 
 # Fill the datatype column with the altair datatypes
-# print(df_sample.head())
-alt_types = ["Quantitative", "Nominal", "Quantitative", "Quantitative", "Nominal", "Nominal/Ordinal", "Nominal", "Nominal", "Nominal", "Nominal", "Quantitative", "Quantitative", "Ordinal"]
+alt_types = ["Quantitative", "Nominal", "Ordinal", "Quantitative", "Nominal", "Nominal", "Nominal", "Nominal", "Nominal", "Nominal", "Ordinal", "Quantitative", "Ordinal"]
 summary_df_sample["datatypes"] = alt_types
 
 print(summary_df_sample)
@@ -448,7 +447,7 @@ The level of aggregation is . And the DataFrame has 155 rows.
 2. 
 ```{python}
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases
-chart_alert = alt.Chart(df_top_alerts_maps).mark_point().encode(
+chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick").encode(
     alt.X("longitude:Q", scale = alt.Scale(domain = [41.60, 42.00])),
     alt.Y("latitude:Q", scale = alt.Scale(domain = [-87.80, -87.60])),
     alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
@@ -505,7 +504,7 @@ chart_map = alt.Chart(geo_data).mark_geoshape(
 ).project("albersUsa")
 
 # Redefine the scatterplot
-# chart_alert = alt.Chart(df_top_alerts_maps).mark_point().encode(
+# chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick").encode(
 #     longitude = "longitude:Q",
 #     latitude = "latitude:Q",
 #     size = alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
