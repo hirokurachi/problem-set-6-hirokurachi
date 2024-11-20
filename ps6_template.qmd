@@ -311,7 +311,7 @@ Now, the hierarchy of types are like below, excluding nan in each type:
 
     - Hazard
 
-Finally, we need to keep the NA subtypes, because they count up to 96086 observations with up to about 12.3% share among whole observations, suggesting that ignoring them would affect our findings (especially on total values) significantly. On contrary, by explicitly saying them "Unclassified", we can grasp the whole status of the data, and it is still useful to know how the dataset successfully includes incomplete data.
+Finally, we need to keep the NA subtypes, because they count up to 96086 observations with up to about 12.3% share among whole observations, suggesting that completely dropping these rows would lose significant amount of samples from the population, with risks of affecting our statistical analysis severely and significantly. On contrary, by explicitly saying them "Unclassified", we can recognize them without confusion. And we can grasp the whole quality of the dataset itself, as it is still useful to know how the dataset successfully includes incomplete data if there are no problem in dealing with the data.
 
 4. 
 
@@ -421,9 +421,7 @@ b.
 df_waze_updated[["latitude", "longitude"]] = df_waze_updated[["latitude", "longitude"]].applymap(lambda x: round(x, 2))
 
 # Count each group by latitude and longitude
-summary_df_geo = df_waze_updated.groupby(["latitude", "longitude"]).size().reset_index()
-summary_df_geo.columns = ["latitude", "longitude", "count"]
-summary_df_geo = summary_df_geo.sort_values("count", ascending = False)
+summary_df_geo = df_waze_updated.groupby(["latitude", "longitude"]).size().reset_index().rename(columns = {0 : "count"}).sort_values("count", ascending = False)
 
 print(summary_df_geo.head(1))
 ```
@@ -433,8 +431,7 @@ Thus, the set of binned latitude-longitude combination above has the greatest nu
 c. 
 ```{python}
 # Summarize the df by type, subtype, latitude and longitude
-df_top_alerts_maps = df_waze_updated.groupby(["updated_type", "updated_subtype", "latitude", "longitude"]).size().reset_index()
-df_top_alerts_maps.columns = ["updated_type", "updated_subtype", "latitude", "longitude", "count"]
+df_top_alerts_maps = df_waze_updated.groupby(["updated_type", "updated_subtype", "latitude", "longitude"]).size().reset_index().rename(columns = {0 : "count"})
 
 # Group and filter top 10 from the sorted df by type and subtype
 df_top_alerts_maps = df_top_alerts_maps.sort_values("count", ascending = False).groupby(["updated_type", "updated_subtype"]).head(10).reset_index(drop = True)
@@ -447,7 +444,7 @@ The level of aggregation is . And the DataFrame has 155 rows.
 2. 
 ```{python}
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases
-chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick").encode(
+chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick", filled = True).encode(
     alt.X("longitude:Q", scale = alt.Scale(domain = [41.60, 42.00])),
     alt.Y("latitude:Q", scale = alt.Scale(domain = [-87.80, -87.60])),
     alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
@@ -471,7 +468,7 @@ a.
 url_geojson = "https://data.cityofchicago.org/api/geospatial/bbvz-uum9?method=export&format=GeoJSON"
 
 response = requests.get(url_geojson)
-data = response.json()
+data = response.json()  
 
 # Save as a geojson file
 path_json = os.path.join(
@@ -504,7 +501,7 @@ chart_map = alt.Chart(geo_data).mark_geoshape(
 ).project("albersUsa")
 
 # Redefine the scatterplot
-# chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick").encode(
+# chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick", filled = True).encode(
 #     longitude = "longitude:Q",
 #     latitude = "latitude:Q",
 #     size = alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
