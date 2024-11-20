@@ -444,7 +444,10 @@ The level of aggregation is . And the DataFrame has 155 rows.
 2. 
 ```{python}
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases
-chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick", filled = True).encode(
+chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
+    color = "firebrick",
+    filled = True
+).encode(
     alt.X("longitude:Q", scale = alt.Scale(domain = [41.60, 42.00])),
     alt.Y("latitude:Q", scale = alt.Scale(domain = [-87.80, -87.60])),
     alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
@@ -498,10 +501,16 @@ geo_data = alt.Data(values = chicago_geojson["features"])
 chart_map = alt.Chart(geo_data).mark_geoshape(
     fill = "lightgray",
     stroke = "white"
-).project("albersUsa")
+).project(
+    type = "identity", 
+    reflectY = True
+)
 
-# Redefine the scatterplot
-# chart_alert = alt.Chart(df_top_alerts_maps).mark_point(color = "firebrick", filled = True).encode(
+# # Redefine the scatterplot
+# chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
+#     color = "firebrick",
+#     filled = True
+# ).encode(
 #     longitude = "longitude:Q",
 #     latitude = "latitude:Q",
 #     size = alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
