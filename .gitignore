@@ -3,3 +3,9 @@
 
 # ignore csv files
 *.csv
+
+# ignore geojson file
+*.geojson
+
+# ignore pycache folder
+__pycache__/
