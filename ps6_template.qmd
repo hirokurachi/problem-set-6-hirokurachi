@@ -651,36 +651,43 @@ It includes 240 rows.
 c.
 
 ```{python}
+# Create subset
+df_top_alerts_maps_byhour_chosen = df_top_alerts_maps_byhour[(
+    df_top_alerts_maps_byhour["updated_type"] == "Jam"
+) & (
+    df_top_alerts_maps_byhour["updated_subtype"] == "Heavy traffic"
+) & (
+    df_top_alerts_maps_byhour["hour"].isin(["10:00", "16:00", "23:00"])
+)]
+
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
-def plot_chart_alert(time):
-    df = df_top_alerts_maps_byhour[df_top_alerts_maps_byhour["hour"] == time]
-    chart_alert = alt.Chart(df).mark_point(
-        color = "firebrick",
-        filled = True
-    ).encode(
-        longitude = "longitude:Q",
-        latitude = "latitude:Q",
-        size = alt.Size(
-            "count:Q", 
-            scale = alt.Scale(
-                domain = [2400, 4500]
-            ), 
-            legend = alt.Legend(
-                title = "Number of Alerts"
-            )
-        )
-    ).properties(
-        title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
-        height = 300,
-        width = 300
-    ).transform_filter(
-        "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
-    )
-    chart_alert_map_byhour = chart_map + chart_alert
-    return chart_alert_map_byhour
-# Apply the function
-plot_chart_alert("06:00")|plot_chart_alert("12:00")|plot_chart_alert("23:00")
-##NEED TO FIX
+chart_alert = alt.Chart(df_top_alerts_maps_byhour_chosen).mark_point(
+    color = "firebrick",
+    filled = True
+).encode(
+    longitude = "longitude:Q",
+    latitude = "latitude:Q",
+    size = alt.Size(
+        "count:Q", 
+        scale = alt.Scale(
+            domain = [2400, 4500]
+        ), 
+        legend = alt.Legend(
+            title = "Number of Alerts"
+        ))
+).properties(
+    height = 200,
+    width = 200
+)
+
+chart_alert_map_byhour = alt.layer(chart_map, chart_alert).facet(
+    data = df_top_alerts_maps_byhour_chosen,
+    column = "hour:N"
+).properties(
+    title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number"
+)
+
+chart_alert_map_byhour.show()
 ```
     
 
