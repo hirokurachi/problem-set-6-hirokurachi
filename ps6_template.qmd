@@ -138,7 +138,12 @@ null_number = [len(df_waze[df_waze[x].isna()]) for x in df_waze.columns]
 non_null_number = [len(df_waze[~df_waze[x].isna()]) for x in df_waze.columns]
 
 # Summarize the number of observations fo each columns, with categories of NULL/missing or not
-summary_df_waze = dict(zip(["Columns", "NULL", "non_NULL"], [df_waze.columns, null_number, non_null_number]))
+summary_df_waze = dict(
+    zip(
+        ["Columns", "NULL", "non_NULL"], 
+        [df_waze.columns, null_number, non_null_number]
+    )
+)
 summary_df_waze = pd.DataFrame(summary_df_waze)
 
 # Mutate the NULL share
@@ -154,7 +159,9 @@ summary_df_waze = summary_df_waze.melt(
 )
 
 # Plot a stacked bar of the number of observations for each columns, with categories of NULL/missing or not
-summary_df_waze["suborder"] = summary_df_waze["NULL_or_not"].map({"NULL":-1, "non_NULL":1})
+summary_df_waze["suborder"] = summary_df_waze["NULL_or_not"].map(
+    {"NULL":-1, "non_NULL":1}
+)
 chart_null = alt.Chart(summary_df_waze).mark_bar().encode(
     alt.X("Columns:N"),
     alt.Y("Number:Q"),
@@ -221,8 +228,8 @@ print(f"types which includes subtype nan: {type_include_nan}")
 Then, we would find out whether the subtypes in each type are informative for their sub-subtypes, by extracting subtype names (including sub-subtype names or not) removing type names from them (This time, we would exclude nan from the checking process).
 
 ```{python}
-# Summarize the hierarchy of types and subtypes (not including subtype nan)
-df_subsubtype = df_waze.groupby(["type", "subtype"]).size().reset_index()
+# Summarize the hierarchy of types and subtypes (not including nan in subtype)
+df_hierarchy = df_waze.groupby(["type", "subtype"]).size().reset_index()
 
 # Remove type name from each subtypes to isolate subtypes from types
 # Define function to remove head from base strings
@@ -230,9 +237,11 @@ def remove_head(head, base):
     result = base.replace(f"{head}_", "")
     return result
 # Isolate subtypes from types by applying the function
-df_subsubtype["subtype"] = [remove_head(h, b) for h, b in zip(df_subsubtype["type"], df_subsubtype["subtype"])]
+df_hierarchy["subtype"] = [remove_head(h, b) for h, b in zip(
+    df_hierarchy["type"], df_hierarchy["subtype"]
+)]
 
-print(df_subsubtype)
+print(df_hierarchy)
 ```
 
 The result above implies that types "HAZARD" would include sub-subtypes as well as subtypes, because the name of subtypes has some common headers such as "ON_ROAD" or "WEATHER" - which would be the subtype names, while the remainings are the sub-subtype names.
@@ -318,7 +327,7 @@ Finally, we need to keep the NA subtypes, because they count up to 96086 observa
 a.
 
 ```{python}
-# Create base df
+# Create base df for crosswalk
 df_crosswalk = df_waze.copy()
 
 # Create "updated_" columns with temporal values
@@ -327,8 +336,14 @@ df_crosswalk["updated_subtype"] = df_crosswalk["subtype"]
 df_crosswalk["updated_subsubtype"] = df_crosswalk["subtype"]
 
 # Summarize the hierarchy from the df
-df_crosswalk = df_crosswalk.groupby(["type", "subtype", "updated_type", "updated_subtype", "updated_subsubtype"], dropna = False).size().reset_index()
-df_crosswalk = df_crosswalk.drop(columns = df_crosswalk.columns[-1], axis = 1)
+df_crosswalk = df_crosswalk.groupby(
+    ["type", "subtype", "updated_type", "updated_subtype", "updated_subsubtype"], 
+    dropna = False
+).size().reset_index()
+df_crosswalk = df_crosswalk.drop(
+    columns = df_crosswalk.columns[-1], 
+    axis = 1
+)
 ```
 
 b.
@@ -384,7 +399,9 @@ df_waze_updated = df_waze.merge(
 )
 
 # Count the rows for Accident - Unclassified
-num_Accdnt_Unclssfd = len(df_waze_updated[(df_waze_updated["updated_type"] == "Accident") & (df_waze_updated["updated_subtype"] == "Unclassified")])
+num_Accdnt_Unclssfd = len(df_waze_updated[
+    (df_waze_updated["updated_type"] == "Accident") & (df_waze_updated["updated_subtype"] == "Unclassified")
+])
 print(f"The number of rows for Accident - Unclassified is {num_Accdnt_Unclssfd}.")
 ```
 
@@ -421,7 +438,14 @@ b.
 df_waze_updated[["latitude", "longitude"]] = df_waze_updated[["latitude", "longitude"]].applymap(lambda x: round(x, 2))
 
 # Count each group by latitude and longitude
-summary_df_geo = df_waze_updated.groupby(["latitude", "longitude"]).size().reset_index().rename(columns = {0 : "count"}).sort_values("count", ascending = False)
+summary_df_geo = df_waze_updated.groupby(
+    ["latitude", "longitude"]
+).size().reset_index().rename(
+    columns = {0 : "count"}
+).sort_values(
+    "count", 
+    ascending = False
+)
 
 print(summary_df_geo.head(1))
 ```
@@ -431,10 +455,19 @@ Thus, the set of binned latitude-longitude combination above has the greatest nu
 c. 
 ```{python}
 # Summarize the df by type, subtype, latitude and longitude
-df_top_alerts_maps = df_waze_updated.groupby(["updated_type", "updated_subtype", "latitude", "longitude"]).size().reset_index().rename(columns = {0 : "count"})
+df_top_alerts_maps = df_waze_updated.groupby(
+    ["updated_type", "updated_subtype", "latitude", "longitude"]
+).size().reset_index().rename(
+    columns = {0 : "count"}
+)
 
 # Group and filter top 10 from the sorted df by type and subtype
-df_top_alerts_maps = df_top_alerts_maps.sort_values("count", ascending = False).groupby(["updated_type", "updated_subtype"]).head(10).reset_index(drop = True)
+df_top_alerts_maps = df_top_alerts_maps.sort_values(
+    "count", 
+    ascending = False
+).groupby(
+    ["updated_type", "updated_subtype"]
+).head(10).reset_index(drop = True)
 
 df_top_alerts_maps.to_csv(r"top_alerts_map\top_alerts_map.csv")
 ```
@@ -448,9 +481,27 @@ chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
     color = "firebrick",
     filled = True
 ).encode(
-    alt.X("longitude:Q", scale = alt.Scale(domain = [41.60, 42.00])),
-    alt.Y("latitude:Q", scale = alt.Scale(domain = [-87.80, -87.60])),
-    alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
+    alt.X(
+        "longitude:Q", 
+        scale = alt.Scale(
+            domain = [41.60, 42.00]
+        )
+    ),
+    alt.Y(
+        "latitude:Q", 
+        scale = alt.Scale(
+            domain = [-87.80, -87.60]
+        )
+    ),
+    alt.Size(
+        "count:Q", 
+        scale = alt.Scale(
+            domain = [2400, 4500]
+        ), 
+        legend = alt.Legend(
+            title = "Number of Alerts"
+        )
+    )
 ).properties(
     title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
     height = 300,
@@ -506,14 +557,25 @@ chart_map = alt.Chart(geo_data).mark_geoshape(
     reflectY = True
 )
 
-# # Redefine the scatterplot
+# Redefine the scatterplot
 # chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
 #     color = "firebrick",
 #     filled = True
 # ).encode(
 #     longitude = "longitude:Q",
 #     latitude = "latitude:Q",
-#     size = alt.Size("count:Q", scale = alt.Scale(domain = [2400, 4500]), legend = alt.Legend(title = "Number of Alerts"))
+#     size = alt.Size(
+#         "count:Q", 
+#         scale = alt.Scale(
+#             domain = [2400, 4500]
+#         ), 
+#         legend = alt.Legend(
+#             title = "Number of Alerts"
+#         )
+#     )
+# ).project(
+#     type = "identity", 
+#     reflectY = True
 # ).properties(
 #     title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
 #     height = 300,
