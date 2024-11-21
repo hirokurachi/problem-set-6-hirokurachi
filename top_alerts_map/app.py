@@ -136,8 +136,7 @@ def server(input, output, session):
             fill = "lightgray",
             stroke = "white"
         ).project(
-            type = "identity", 
-            reflectY = True
+            type = "equirectangular"
         )
         return chart
 

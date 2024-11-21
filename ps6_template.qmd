@@ -553,36 +553,32 @@ chart_map = alt.Chart(geo_data).mark_geoshape(
     fill = "lightgray",
     stroke = "white"
 ).project(
-    type = "identity", 
-    reflectY = True
+    type = "equirectangular"
 )
 
 # Redefine the scatterplot
-# chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
-#     color = "firebrick",
-#     filled = True
-# ).encode(
-#     longitude = "longitude:Q",
-#     latitude = "latitude:Q",
-#     size = alt.Size(
-#         "count:Q", 
-#         scale = alt.Scale(
-#             domain = [2400, 4500]
-#         ), 
-#         legend = alt.Legend(
-#             title = "Number of Alerts"
-#         )
-#     )
-# ).project(
-#     type = "identity", 
-#     reflectY = True
-# ).properties(
-#     title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
-#     height = 300,
-#     width = 300
-# ).transform_filter(
-#     "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
-# )
+chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
+    color = "firebrick",
+    filled = True
+).encode(
+    longitude = "longitude:Q",
+    latitude = "latitude:Q",
+    size = alt.Size(
+        "count:Q", 
+        scale = alt.Scale(
+            domain = [2400, 4500]
+        ), 
+        legend = alt.Legend(
+            title = "Number of Alerts"
+        )
+    )
+).properties(
+    title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
+    height = 300,
+    width = 300
+).transform_filter(
+    "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
+)
 
 chart_alert_map = chart_map + chart_alert
 
@@ -593,26 +589,31 @@ chart_alert_map.show()
 
 a. 
 
-```{python}
+![](app1_5a.png)
 
-```
+There are 16 total combinations.
 
 b. 
-```{python}
 
-```
+![](app1_5b.png)
 
 c. 
-```{python}
 
-```
+![](app1_5c.png)
+
+WHERE IS THE MOST???
 
 d. 
-```{python}
 
-```
+FORMULATE QUESTION
+
+![](app1_5d.png)
+
+ANSWER
 
 e. 
+
+ADD WHICH COLUMN?
 
 # App #2: Top Location by Alert Type and Hour Dashboard (20 points) {-}
 
@@ -620,17 +621,66 @@ e.
 
 a. 
 
-
+Collapsing the dataset by the column *ts* would be not a good idea. We of course need to subset the dataset based on the information in *ts*, but we need to create a new column, extracting an hour of the day from each value in the column. There, we should remove redundant information, such as year-month-date(irrelevant in our analysis), or minute and seconds (too detailed for input in UI, not requested), or "UTC" (All data in the column are UTC).
     
-b. 
+b.  
 ```{python}
+# Create "hour" column
+df_waze_updated["hour"] = pd.to_datetime(df_waze_updated["ts"].replace("UTC", "")).dt.strftime("%H:00")
 
+# Summarize the df by type, subtype, latitude, longitude and hour
+df_top_alerts_maps_byhour = df_waze_updated.groupby(
+    ["updated_type", "updated_subtype", "latitude", "longitude", "hour"]
+).size().reset_index().rename(
+    columns = {0 : "count"}
+)
+
+# Group and filter top 10 from the sorted df by hour
+df_top_alerts_maps_byhour = df_top_alerts_maps_byhour.sort_values(
+    "count", 
+    ascending = False
+).groupby(
+    ["hour"]
+).head(10).reset_index(drop = True)
+
+df_top_alerts_maps_byhour.to_csv(r"top_alerts_map_byhour\top_alerts_map_byhour.csv")
 ```
+
+It includes 240 rows.
 
 c.
 
 ```{python}
-
+# Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
+def plot_chart_alert(time):
+    df = df_top_alerts_maps_byhour[df_top_alerts_maps_byhour["hour"] == time]
+    chart_alert = alt.Chart(df).mark_point(
+        color = "firebrick",
+        filled = True
+    ).encode(
+        longitude = "longitude:Q",
+        latitude = "latitude:Q",
+        size = alt.Size(
+            "count:Q", 
+            scale = alt.Scale(
+                domain = [2400, 4500]
+            ), 
+            legend = alt.Legend(
+                title = "Number of Alerts"
+            )
+        )
+    ).properties(
+        title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
+        height = 300,
+        width = 300
+    ).transform_filter(
+        "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
+    )
+    chart_alert_map_byhour = chart_map + chart_alert
+    return chart_alert_map_byhour
+# Apply the function
+plot_chart_alert("06:00")|plot_chart_alert("12:00")|plot_chart_alert("23:00")
+##NEED TO FIX
 ```
     
 
