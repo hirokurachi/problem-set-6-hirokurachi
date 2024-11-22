@@ -117,7 +117,7 @@ def server(input, output, session):
         geo_data = alt.Data(values = chicago_geojson["features"])
         return geo_data
 
-    # create plot the map
+    # create the map
     @reactive.calc    
     def chart_map():
         chart = alt.Chart(geo_data()).mark_geoshape(
