@@ -21,7 +21,7 @@ def server(input, output, session):
         return df
 
     # Create choices for selector
-    # Summarize sets of type and subtype
+    # summarize sets of type and subtype
     @reactive.calc
     def df_choices():
         df = df_top_alerts_maps().groupby(
@@ -29,7 +29,7 @@ def server(input, output, session):
         ).size().reset_index()
         return df
     
-    # Define choices
+    # define choices
     @reactive.effect
     def _():
         choices = [f"{t} - {s}" for t, s in zip(
@@ -38,21 +38,17 @@ def server(input, output, session):
         )]
         ui.update_select("type_subtype", choices = choices)
 
-    # Save input on the selecter
+    # Save input from the selecter
     # chosen type
     @reactive.calc
     def type_chosen():
         if input.type_subtype() == None:
             result = "Accident" # Set default for loading time
+        elif input.type_subtype() == "Road closed - Hazard": # Might be categorized as "Hazard" type erroneously by the criterion below
+            result = "Road closed"
         else:
             for type in df_choices()["updated_type"].unique():
                 if type in input.type_subtype():
-                    if (
-                        type == "Hazard"
-                    )&(
-                        input.type_subtype() == "Road closed - Hazard"
-                    ):
-                        result = "Road closed"
                     result = type
                     break
         return result
@@ -70,7 +66,8 @@ def server(input, output, session):
             )
         return result                    
 
-    # Create subset of waze df
+    # Create output from the input
+    # create subset of waze df
     @reactive.calc
     def df_chosen():
         df = df_top_alerts_maps()[(
@@ -80,32 +77,22 @@ def server(input, output, session):
         )]
         return df
 
-    # Set appropriate domain for chosen type and subtype
+    # set appropriate domain for chosen type and subtype
     @reactive.calc
     def domain():
         domain = [min(df_chosen()["count"]), max(df_chosen()["count"])]
         return domain
 
-    # Create scatter plot for number of alert
+    # create scatter plot for number of alert
     @reactive.calc
     def chart_alert():
         chart = alt.Chart(df_chosen()).mark_point(
             color = "firebrick",
             filled = True
         ).encode(
-            alt.X(
-                "longitude:Q", 
-                scale = alt.Scale(
-                    domain = [41.60, 42.00]
-                )
-            ),
-            alt.Y(
-                "latitude:Q", 
-                scale = alt.Scale(
-                    domain = [-87.80, -87.60]
-                )
-            ),
-            alt.Size(
+            longitude = "longitude:Q",
+            latitude = "latitude:Q",
+            size = alt.Size(
                 "count:Q", 
                 scale = alt.Scale(
                     domain = domain()
@@ -115,13 +102,14 @@ def server(input, output, session):
                 )
             )
         ).properties(
-            title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number",
+            title = f"Top 10 Areas of '{input.type_subtype()}' Alerts Number",
             height = 300,
             width = 300
         )
         return chart
 
-    # Load geojson    
+    # Create map
+    # load geojson    
     @reactive.calc
     def geo_data():
         with open("chicago-boundaries.geojson") as f:
@@ -129,7 +117,7 @@ def server(input, output, session):
         geo_data = alt.Data(values = chicago_geojson["features"])
         return geo_data
 
-    # Create plot the map
+    # create plot the map
     @reactive.calc    
     def chart_map():
         chart = alt.Chart(geo_data()).mark_geoshape(
@@ -140,7 +128,8 @@ def server(input, output, session):
         )
         return chart
 
-    # Plot overlaying two plots
+    # Create plot for output_widget
+    # overlay the plots
     @render_altair
     def chart_alert_map():
         return chart_map() + chart_alert()
