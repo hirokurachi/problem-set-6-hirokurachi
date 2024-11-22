@@ -723,9 +723,13 @@ a.
 
 b. 
 
+![](app2_2b.png)
 
 c. 
 
+![](app2_2c-morning.png)
+
+![](app2_2c-night.png)
 
 # App #3: Top Location by Alert Type and Hour Dashboard (20 points){-}
 
