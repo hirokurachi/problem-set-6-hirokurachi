@@ -24,9 +24,9 @@ We use (`*`) to indicate a problem that we think might be time consuming.
 # Steps to submit (10 points on PS6) {-}
 
 1. "This submission is my work alone and complies with the 30538 integrity
-policy." Add your initials to indicate your agreement: \*\*\HK\*\*
-2. "I have uploaded the names of anyone I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  \*\*\HK\*\* (2 point)
-3. Late coins used this pset: \*\*\_\_\*\* Late coins left after submission: \*\*\_\_\*\*
+policy." Add your initials to indicate your agreement: \*\*HK\*\*
+2. "I have uploaded the names of anyone I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  \*\*HK\*\* (2 point)
+3. Late coins used this pset: \*\*00\*\* Late coins left after submission: \*\*01\*\*
 
 4. Before starting the problem set, make sure to read and agree to the terms of data usage for the Waze data [here](https://canvas.uchicago.edu/courses/59054/quizzes/130617).
 
@@ -71,6 +71,7 @@ import zipfile
 import os
 import pandas as pd
 import altair as alt 
+alt.renderers.enable("png")
 import pandas as pd
 from datetime import date
 import numpy as np
@@ -203,6 +204,7 @@ From the result above, the variables which have the NULL is "nThumbsUp", "street
 
 3. 
 
+a.
 ```{python}
 # Extract Unique types and subtypes
 type_unique = df_waze["type"].unique().tolist()
@@ -247,6 +249,8 @@ print(df_hierarchy)
 The result above implies that types "HAZARD" would include sub-subtypes as well as subtypes, because the name of subtypes has some common headers such as "ON_ROAD" or "WEATHER" - which would be the subtype names, while the remainings are the sub-subtype names.
 
 On the other hand, other 3 types doesn't have such characteristics in their subtype names, implying not having sub-subtypes.
+
+b. 
 
 Now, the hierarchy of types are like below, excluding nan in each type:
 
@@ -320,6 +324,8 @@ Now, the hierarchy of types are like below, excluding nan in each type:
 
     - Hazard
 
+c.
+
 Finally, we need to keep the NA subtypes, because they count up to 96086 observations with up to about 12.3% share among whole observations, suggesting that completely dropping these rows would lose significant amount of samples from the population, with risks of affecting our statistical analysis severely and significantly. On contrary, by explicitly saying them "Unclassified", we can recognize them without confusion. And we can grasp the whole quality of the dataset itself, as it is still useful to know how the dataset successfully includes incomplete data if there are no problem in dealing with the data.
 
 4. 
@@ -384,8 +390,6 @@ df_crosswalk.loc[df_crosswalk["updated_subsubtype"] == df_crosswalk["updated_sub
 
 # Update the "updated_" columns to a readable format
 df_crosswalk.iloc[:, 2:] = df_crosswalk.iloc[:, 2:].map(lambda x: x.replace("_", " ").capitalize())
-
-print(df_crosswalk)
 ```
 
 c.
@@ -418,7 +422,7 @@ d.
 a. 
 ```{python}
 # Split the strings column "geo" at every white-space character
-base_list_geo = df_waze_updated["geo"].map(lambda x: re.split("\s", x))
+base_list_geo = df_waze_updated["geo"].map(lambda x: re.split(r"\s", x))
 
 # Convert the series of lists into df
 df_geo = pd.DataFrame(base_list_geo.tolist(), columns = ["longitude", "latitude"])
@@ -435,7 +439,7 @@ df_waze_updated = df_waze_updated.join(df_geo)
 b. 
 ```{python}
 # Bin the longitude and latitude variables
-df_waze_updated[["longitude", "latitude"]] = df_waze_updated[["longitude", "latitude"]].applymap(lambda x: round(x, 2))
+df_waze_updated[["longitude", "latitude"]] = df_waze_updated[["longitude", "latitude"]].map(lambda x: round(x, 2))
 
 # Count each group by latitude and longitude
 summary_df_geo = df_waze_updated.groupby(
@@ -606,17 +610,17 @@ chart_alert_map.show()
 
 a. 
 
-![](app1_5a.png)
+![](app1_5a.png){width = 200, height = 200}
 
 There are 16 total combinations.
 
 b. 
 
-![](app1_5b.png)
+![](app1_5b.png){width = 200, height = 200}
 
 c. 
 
-![](app1_5c.png)
+![](app1_5c.png){width = 200, height = 200}
 
 WHERE IS THE MOST???
 
@@ -624,7 +628,7 @@ d.
 
 FORMULATE QUESTION
 
-![](app1_5d.png)
+![](app1_5d.png){width = 200, height = 200}
 
 ANSWER
 
@@ -719,17 +723,17 @@ chart_alert_map_byhour.show()
 
 a. 
 
-![](app2_2a.png)
+![](app2_2a.png){width = 200, height = 200}
 
 b. 
 
-![](app2_2b.png)
+![](app2_2b.png){width = 200, height = 200}
 
 c. 
 
-![](app2_2c-morning.png)
+![](app2_2c-morning.png){width = 200, height = 200}
 
-![](app2_2c-night.png)
+![](app2_2c-night.png){width = 200, height = 200}
 
 # App #3: Top Location by Alert Type and Hour Dashboard (20 points){-}
 
@@ -738,11 +742,62 @@ c.
 
 a. 
 
+COLLAPSING BY RANGE IS GOOD OR NOT??
+We cannot define the range of numbers for format "HH:MM" with ".range()" method. Currently, the column "hour" contains strings, thus we cannot get range from chosen hours based on the column. And even if we 
+
 b. 
 
 ```{python}
+# Create base column for calculating range of hours
+df_top_alerts_maps_byhour["hour_dt"] = pd.to_datetime(df_top_alerts_maps_byhour["hour"])
+df_top_alerts_maps_byhour["hour_dt"] = [x.time() for x in df_top_alerts_maps_byhour["hour_dt"]]
 
+# Create subset
+df_top_alerts_maps_byhour_range = df_top_alerts_maps_byhour[(
+    df_top_alerts_maps_byhour["updated_type"] == "Jam"
+) & (
+    df_top_alerts_maps_byhour["updated_subtype"] == "Heavy traffic"
+) & (
+    df_top_alerts_maps_byhour["hour_dt"].between(time(6, 0), time(9, 0))
+)]
+
+# Set appropriate domain for chosen type and subtype
+domain_3 = [
+    df_top_alerts_maps_byhour_range["count"].min(), 
+    df_top_alerts_maps_byhour_range["count"].max()
+]
+
+# Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
+chart_alert = alt.Chart().mark_point(
+    color = "firebrick",
+    filled = True
+).encode(
+    longitude = "longitude:Q",
+    latitude = "latitude:Q",
+    size = alt.Size(
+        "count:Q",
+        scale = alt.Scale(
+            domain = domain_3
+        ),  
+        legend = alt.Legend(
+            title = "Number of Alerts"
+        ))
+).properties(
+    height = 200,
+    width = 200
+)
+
+chart_alert_map_byhour = alt.layer(chart_map, chart_alert).facet(
+    data = df_top_alerts_maps_byhour_range,
+    column = "hour:N"
+).properties(
+    title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number"
+)
+
+chart_alert_map_byhour.show()
 ```
+<!--Attribution: Method ".time()" referring to Perplexity (https://www.perplexity.ai/search/how-to-make-date-time-object-w-bkYUZPR5R.6jqOOnOhDIzw)-->
+<!--Attribution: Method ".between()" referring to Perplexity (https://www.perplexity.ai/search/df-top-alerts-maps-byhour-hour-vtZei4OvTCCm.fD0riMcVg)-->
 
 2. 
 
