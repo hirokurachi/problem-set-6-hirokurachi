@@ -10,14 +10,14 @@ app_ui = ui.page_fluid(
         label="Select Type and Subtype",
         choices=[]
     ),
-    output_widget("chart_alert_map")
+    output_widget("chart_alerts_map")
 )
 
 
 def server(input, output, session):
     # Load and store waze data
     @reactive.calc
-    def df_top_alerts_maps():
+    def df_top_alerts_map():
         """Create base df"""
         df = pd.read_csv("top_alerts_map.csv")
         return df
@@ -26,7 +26,7 @@ def server(input, output, session):
     @reactive.calc
     def df_choices():
         """Summarize sets of type and subtype"""
-        df = df_top_alerts_maps().groupby(
+        df = df_top_alerts_map().groupby(
             ["updated_type", "updated_subtype"]
         ).size().reset_index()
         return df
@@ -73,10 +73,10 @@ def server(input, output, session):
     @reactive.calc
     def df_chosen():
         """Create subset of waze df"""
-        df = df_top_alerts_maps()[(
-            df_top_alerts_maps()["updated_type"] == type_chosen()
+        df = df_top_alerts_map()[(
+            df_top_alerts_map()["updated_type"] == type_chosen()
         ) & (
-            df_top_alerts_maps()["updated_subtype"] == subtype_chosen()
+            df_top_alerts_map()["updated_subtype"] == subtype_chosen()
         )]
         return df
 
@@ -87,7 +87,7 @@ def server(input, output, session):
         return domain
 
     @reactive.calc
-    def chart_alert():
+    def chart_alerts():
         """Create scatter plot for number of alert"""
         chart = alt.Chart(df_chosen()).mark_point(
             color="firebrick",
@@ -133,9 +133,9 @@ def server(input, output, session):
 
     # Create plot for output_widget
     @render_altair
-    def chart_alert_map():
+    def chart_alerts_map():
         """Overlay the plots"""
-        return chart_map() + chart_alert()
+        return chart_map() + chart_alerts()
 
 
 app = App(app_ui, server)

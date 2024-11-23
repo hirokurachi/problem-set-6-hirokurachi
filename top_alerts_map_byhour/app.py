@@ -11,14 +11,14 @@ app_ui = ui.page_fluid(
         choices=[]
     ),
     ui.input_slider("hour_chosen", "Pick hour", 0, 23, 0),
-    output_widget("chart_alert_map_byhour")
+    output_widget("chart_alerts_map_byhour")
 )
 
 
 def server(input, output, session):
     # Load and store waze data
     @reactive.calc
-    def df_top_alerts_maps_byhour():
+    def df_top_alerts_map_byhour():
         """Create base df"""
         df = pd.read_csv("top_alerts_map_byhour.csv")
         return df
@@ -27,7 +27,7 @@ def server(input, output, session):
     @reactive.calc
     def df_choices():
         """Summarize sets of type and subtype"""
-        df = df_top_alerts_maps_byhour().groupby(
+        df = df_top_alerts_map_byhour().groupby(
             ["updated_type", "updated_subtype"]
         ).size().reset_index()
         return df
@@ -80,12 +80,12 @@ def server(input, output, session):
     @reactive.calc
     def df_chosen():
         """Create subset of waze df"""
-        df = df_top_alerts_maps_byhour()[(
-            df_top_alerts_maps_byhour()["updated_type"] == type_chosen()
+        df = df_top_alerts_map_byhour()[(
+            df_top_alerts_map_byhour()["updated_type"] == type_chosen()
         ) & (
-            df_top_alerts_maps_byhour()["updated_subtype"] == subtype_chosen()
+            df_top_alerts_map_byhour()["updated_subtype"] == subtype_chosen()
         ) & (
-            df_top_alerts_maps_byhour()["hour"] == hour_chosen()
+            df_top_alerts_map_byhour()["hour"] == hour_chosen()
         )]
         return df
 
@@ -96,7 +96,7 @@ def server(input, output, session):
         return domain
 
     @reactive.calc
-    def chart_alert_byhour():
+    def chart_alerts_byhour():
         """Create scatter plot for number of alert"""
         chart = alt.Chart(df_chosen()).mark_point(
             color="firebrick",
@@ -146,12 +146,12 @@ def server(input, output, session):
 
     # Create plot for output_widget
     @render_altair
-    def chart_alert_map_byhour():
+    def chart_alerts_map_byhour():
         """Overlay the plots, if there are observations which satisfy conditions"""
         if len(df_chosen()) == 0:
             return chart_map()
         else:
-            return chart_map() + chart_alert_byhour()
+            return chart_map() + chart_alerts_byhour()
 
 
 app = App(app_ui, server)

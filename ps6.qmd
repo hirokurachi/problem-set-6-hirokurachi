@@ -105,18 +105,15 @@ path_sample = os.path.join(
 df_sample = pd.read_csv(path_sample)
 
 # Summarize datatype for each columns
-summary_df_sample = pd.DataFrame(df_sample.dtypes).reset_index()
-summary_df_sample.columns = ["columns", "datatypes"]
-
-# Ignore the last three columns
-summary_df_sample = summary_df_sample.iloc[0:13]
+df_sample_dtypes = pd.DataFrame(df_sample.dtypes).reset_index()
+df_sample_dtypes.columns = ["columns", "datatypes"]
 
 # Fill the datatype column with the altair datatypes
-alt_types = ["Quantitative", "Nominal", "Ordinal", "Quantitative", "Nominal", "Nominal",
-             "Nominal", "Nominal", "Nominal", "Nominal", "Ordinal", "Quantitative", "Ordinal"]
-summary_df_sample["datatypes"] = alt_types
+alt_datatypes = ["Quantitative", "Nominal", "Ordinal", "Quantitative", "Nominal", "Nominal", "Nominal",
+             "Nominal", "Nominal", "Nominal", "Ordinal", "Quantitative", "Ordinal", np.nan, np.nan, np.nan]
+df_sample_dtypes["datatypes"] = alt_datatypes
 
-print(summary_df_sample)
+print(df_sample_dtypes)
 ```
 
 2. 
@@ -134,31 +131,30 @@ null_number = [len(df_waze[df_waze[x].isna()]) for x in df_waze.columns]
 non_null_number = [len(df_waze[~df_waze[x].isna()]) for x in df_waze.columns]
 
 # Summarize the number of observations fo each columns, with categories of NULL/missing or not
-summary_df_waze = dict(
-    zip(
-        ["Columns", "NULL", "non_NULL"],
-        [df_waze.columns, null_number, non_null_number]
+df_nullshare_waze = pd.DataFrame(
+    dict(zip(
+        ["Columns", "NULL", "non_NULL"], 
+        [df_waze.columns, null_number, non_null_number])
     )
 )
-summary_df_waze = pd.DataFrame(summary_df_waze)
 
 # Mutate the NULL share
-summary_df_waze["NULL_share"] = summary_df_waze["NULL"] / len(df_waze)
+df_nullshare_waze["NULL_share"] = df_nullshare_waze["NULL"] / len(df_waze)
 
-print(summary_df_waze)
+print(df_nullshare_waze)
 
 # Melt the df to specify category (NULL/non-NULL) and whose number for each columns(column names)
-summary_df_waze = summary_df_waze.melt(
+df_null_or_not_waze = df_nullshare_waze.melt(
     id_vars="Columns",
     var_name="NULL_or_not",
     value_name="Number"
 )
 
 # Plot a stacked bar of the number of observations for each columns, with categories of NULL/missing or not
-summary_df_waze["suborder"] = summary_df_waze["NULL_or_not"].map(
+df_null_or_not_waze["bool_Null_or_not"] = df_null_or_not_waze["NULL_or_not"].map(
     {"NULL": -1, "non_NULL": 1}
 )
-chart_null = alt.Chart(summary_df_waze).mark_bar().encode(
+chart_null = alt.Chart(df_null_or_not_waze).mark_bar().encode(
     alt.X("Columns:N"),
     alt.Y("Number:Q"),
     alt.Color("NULL_or_not:N",
@@ -167,7 +163,7 @@ chart_null = alt.Chart(summary_df_waze).mark_bar().encode(
                   domain=["NULL", "non_NULL"],
                   range=["red", "yellowgreen"]
               )),
-    alt.Order("suborder", sort="ascending")
+    alt.Order("bool_Null_or_not", sort="ascending")
 ).properties(
     title="Number of NULLs in each columns",
     height=300,
@@ -175,7 +171,7 @@ chart_null = alt.Chart(summary_df_waze).mark_bar().encode(
 )
 
 # Add the numbers of NULL as texts
-text_null = alt.Chart(summary_df_waze).mark_text(
+text_null = alt.Chart(df_null_or_not_waze).mark_text(
     angle=45
 ).encode(
     x="Columns:N",
@@ -207,11 +203,14 @@ subtype_unique = df_waze["subtype"].unique().tolist()
 
 print(f"type: {type_unique}")
 print(f"subtype: {subtype_unique}")
+```
 
-# Define a function to check whether a type include NA subtype
+```{python}
+# Find out types which have a subtype that is NA
 
 
 def subtype_isna(type):
+    """Check whether a type include NA subtype"""
     df_waze_bytype = df_waze[df_waze["type"] == type]
     subtype_unique_bytype = df_waze_bytype["subtype"].unique().tolist()
     if np.nan in subtype_unique_bytype:
@@ -220,27 +219,33 @@ def subtype_isna(type):
         return False
 
 
-# Apply the function in list comprehension
 type_include_nan = [type for type in type_unique if subtype_isna(type)]
 print(f"types which includes subtype nan: {type_include_nan}")
 ```
+
+All of four types have a subtype that is NA.
 
 Then, we would find out whether the subtypes in each type are informative for their sub-subtypes, by extracting subtype names (including sub-subtype names or not) removing type names from them (This time, we would exclude nan from the checking process).
 
 ```{python}
 # Summarize the hierarchy of types and subtypes (not including nan in subtype)
-df_hierarchy = df_waze.groupby(["type", "subtype"]).size().reset_index()
+df_hierarchy = df_waze.groupby(
+    ["type", "subtype"]
+).size().reset_index().rename(
+    columns={0: "count"}
+)
 
-# Remove type name from each subtypes to isolate subtypes from types
-# Define function to remove head from base strings
+# Define general function to remove parent name from children name in the categorical hierarchy
+
 
 
 def remove_head(head, base):
+    """Remove head strings from base strings"""
     result = base.replace(f"{head}_", "")
     return result
 
 
-# Isolate subtypes from types by applying the function
+# Remove type name from subtype names
 df_hierarchy["subtype"] = [remove_head(h, b) for h, b in zip(
     df_hierarchy["type"], df_hierarchy["subtype"]
 )]
@@ -248,13 +253,13 @@ df_hierarchy["subtype"] = [remove_head(h, b) for h, b in zip(
 print(df_hierarchy)
 ```
 
-The result above implies that types "HAZARD" would include sub-subtypes as well as subtypes, because the name of subtypes has some common headers such as "ON_ROAD" or "WEATHER" - which would be the subtype names, while the remainings are the sub-subtype names.
+The result above implies that types "HAZARD" would include sub-subtypes as well as subtypes, because the name of subtypes has some common head strings such as "ON_ROAD" or "WEATHER" - which would be the isolated subtype names, while the remainings are the isolated sub-subtype names.
 
 On the other hand, other 3 types doesn't have such characteristics in their subtype names, implying not having sub-subtypes.
 
 b. 
 
-Now, the hierarchy of types are like below, excluding nan in each type:
+Now, the hierarchy of types are like below, excluding subtype of nan in each type:
 
 - Accident
 
@@ -276,23 +281,23 @@ Now, the hierarchy of types are like below, excluding nan in each type:
 
         - Ice
 
+        - Lane closed
+
         - Object
 
         - Pot hole
 
-        - Traffic light fault
-
-        - Lane closed
-
         - Road kill
+
+        - Traffic light fault
 
     - On Shoulder
 
         - (no sub-subtype)
 
-        - Car stopped
-
         - Animals
+
+        - Car stopped
 
         - Missing sign
 
@@ -304,31 +309,31 @@ Now, the hierarchy of types are like below, excluding nan in each type:
 
         - Fog
 
-        - Heavy snow
-
         - Hail
+
+        - Heavy snow
 
 - Jam
 
     - Heavy traffic
 
+    - Light traffic
+
     - Moderate traffic
 
     - Stand still traffic
 
-    - Light traffic
-
 - Road Closed
 
-    - Event
-
     - Construction
+
+    - Event
 
     - Hazard
 
 c.
 
-Finally, we need to keep the NA subtypes, because they count up to 96086 observations with up to about 12.3% share among whole observations, suggesting that completely dropping these rows would lose significant amount of samples from the population, with risks of affecting our statistical analysis severely and significantly. On contrary, by explicitly saying them "Unclassified", we can recognize them without confusion. And we can grasp the whole quality of the dataset itself, as it is still useful to know how the dataset successfully includes incomplete data if there are no problem in dealing with the data.
+We need to keep the NA subtypes, because they count up to 96086 observations with up to about 12.3% share among whole observations, suggesting that completely dropping these rows would lose significant amount of samples from the population, with risks of affecting our statistical analysis severely and significantly. On contrary, by explicitly saying them "Unclassified", we can recognize them without confusion. And it is still useful to grasp how the dataset successfully includes incomplete data as far as there are no problem in dealing with the data.
 
 4. 
 
@@ -338,42 +343,46 @@ a.
 # Create base df for crosswalk
 df_crosswalk = df_waze.copy()
 
-# Create "updated_" columns with temporal values
+# Summarize the df so that it has rows for each set of type and subtype
+df_crosswalk = df_crosswalk.groupby(
+    ["type", "subtype"],
+    dropna=False
+).size().reset_index()
+
+df_crosswalk = df_crosswalk.rename(
+    columns={0: "count"}
+).drop("count", axis=1)
+
+# Create "updated_" columns with temporal base values
 df_crosswalk["updated_type"] = df_crosswalk["type"]
 df_crosswalk["updated_subtype"] = df_crosswalk["subtype"]
 df_crosswalk["updated_subsubtype"] = df_crosswalk["subtype"]
 
-# Summarize the hierarchy from the df
-df_crosswalk = df_crosswalk.groupby(
-    ["type", "subtype", "updated_type", "updated_subtype", "updated_subsubtype"],
-    dropna=False
-).size().reset_index()
-df_crosswalk = df_crosswalk.drop(
-    columns=df_crosswalk.columns[-1],
-    axis=1
-)
+print(df_crosswalk.head(3))
 ```
 
 b.
 
 ```{python}
-# Prepare for "updated_subtype"
-# Convert nan's in "updated_subtype" into "Unclassified" to include them in the process
+# Convert nan in "updated_subtype" and "updated_subsubtype" into "Unclassified" to make them recognized as strings in following process
 df_crosswalk["updated_subtype"] = df_crosswalk["updated_subtype"].fillna(
     "Unclassified")
+df_crosswalk["updated_subsubtype"] = df_crosswalk["updated_subtype"].fillna(
+    "Unclassified")
 
-# Prepare for "updated_subsubtype"
-# Isolate subtypes from types by applying the remove_head() function
+# Remove type name from "updated_subsubtype" to get subtype + sub-subtype
 df_crosswalk["updated_subsubtype"] = [remove_head(h, b) for h, b in zip(
-    df_crosswalk["type"], df_crosswalk["updated_subtype"])]
+    df_crosswalk["type"], df_crosswalk["updated_subsubtype"])]
 
-# Revise column "updated_subtype"
-# Define function to extract subtypes
+# Isolate subtype names in "updated_subtype"
 
 
 def extract_subtype(type, subtype):
+    """Extract isolated subtype name"""
+    # For types without sub-subtypes, just remove type name
     if type in ["ACCIDENT", "JAM", "ROAD_CLOSED"]:
         return subtype.replace(f"{type}_", "")
+    # For type "Hazard", check which isolated subtype name is included
     elif type == "HAZARD":
         if "ON_ROAD" in subtype:
             return "ON_ROAD"
@@ -385,22 +394,22 @@ def extract_subtype(type, subtype):
             return subtype
 
 
-# Apply the function
 df_crosswalk["updated_subtype"] = [extract_subtype(t, s) for t, s in zip(
     df_crosswalk["type"], df_crosswalk["updated_subtype"])]
 
-# Revise column "updated_subsubtype"
-# Isolate sub-subtypes from subtypes by applying the remove_head() function
+# Remove isolated subtype name from "updated_subsubtype" to get isolated sub-subtype
 df_crosswalk["updated_subsubtype"] = [remove_head(h, b) for h, b in zip(
     df_crosswalk["updated_subtype"], df_crosswalk["updated_subsubtype"])]
 
-# Change them to "Unclassified" if they are the same as the "updated_subtype" (this condition include the case where the subtype is unclassified)
+# Change sub-subtypes to "Unclassified" if they are the same as the "updated_subtype" (this condition include the case where the subtype is "unclassified")
 df_crosswalk.loc[df_crosswalk["updated_subsubtype"] ==
                  df_crosswalk["updated_subtype"], "updated_subsubtype"] = "unclassified"
 
 # Update the "updated_" columns to a readable format
 df_crosswalk.iloc[:, 2:] = df_crosswalk.iloc[:, 2:].map(
     lambda x: x.replace("_", " ").capitalize())
+
+print(df_crosswalk)
 ```
 
 c.
@@ -419,7 +428,8 @@ num_Accdnt_Unclssfd = len(df_waze_updated[
         df_waze_updated["updated_subtype"] == "Unclassified")
 ])
 print(
-    f"The number of rows for Accident - Unclassified is {num_Accdnt_Unclssfd}.")
+    f"The number of rows for Accident - Unclassified is {num_Accdnt_Unclssfd}."
+)
 ```
 
 d.
@@ -435,20 +445,22 @@ d.
 a. 
 ```{python}
 # Split the strings column "geo" at every white-space character
-base_list_geo = df_waze_updated["geo"].map(lambda x: re.split(r"\s", x))
+series_geo_lists = df_waze_updated["geo"].map(lambda x: re.split(r"\s", x))
 
 # Convert the series of lists into df
-df_geo = pd.DataFrame(base_list_geo.tolist(), columns=[
+df_coordinate = pd.DataFrame(series_geo_lists.tolist(), columns=[
                       "longitude", "latitude"])
 
 # Remove redundant strings from the columns
-df_geo["longitude"] = df_geo["longitude"].map(
+df_coordinate["longitude"] = df_coordinate["longitude"].map(
     lambda x: float(x.replace("POINT(", "")))
-df_geo["latitude"] = df_geo["latitude"].map(
+df_coordinate["latitude"] = df_coordinate["latitude"].map(
     lambda x: float(x.replace(")", "")))
 
 # Join the df into the base df
-df_waze_updated = df_waze_updated.join(df_geo)
+df_waze_updated = df_waze_updated.join(df_coordinate)
+
+print(df_waze_updated[["longitude", "latitude"]].head(3))
 ```
 <!--Attribution: Method "re.split()" referring to W3Schools (https://www.w3schools.com/python/python_regex.asp#split)-->
 
@@ -459,7 +471,7 @@ df_waze_updated[["longitude", "latitude"]] = df_waze_updated[[
     "longitude", "latitude"]].map(lambda x: round(x, 2))
 
 # Count each group by latitude and longitude
-summary_df_geo = df_waze_updated.groupby(
+df_coordinate_count = df_waze_updated.groupby(
     ["longitude", "latitude"]
 ).size().reset_index().rename(
     columns={0: "count"}
@@ -468,38 +480,42 @@ summary_df_geo = df_waze_updated.groupby(
     ascending=False
 )
 
-print(summary_df_geo.head(1))
+print(df_coordinate_count.head(1))
 ```
 
-Thus, the set of binned latitude-longitude combination above has the greatest number of observations in the overall dataset.
+The set of binned latitude-longitude combination above has the greatest number of observations in the overall dataset.
 
 c. 
 ```{python}
 # Summarize the df by type, subtype, latitude and longitude
-df_top_alerts_maps = df_waze_updated.groupby(
+df_top_alerts_map = df_waze_updated.groupby(
     ["updated_type", "updated_subtype", "longitude", "latitude"]
 ).size().reset_index().rename(
     columns={0: "count"}
 )
 
 # Group and filter top 10 from the sorted df by type and subtype
-df_top_alerts_maps = df_top_alerts_maps.sort_values(
+df_top_alerts_map = df_top_alerts_map.sort_values(
     "count",
     ascending=False
 ).groupby(
     ["updated_type", "updated_subtype"]
 ).head(10).reset_index(drop=True)
 
-df_top_alerts_maps.to_csv(r"top_alerts_map\top_alerts_map.csv")
+df_top_alerts_map.to_csv(r"top_alerts_map\top_alerts_map.csv")
 ```
 
-LEVEL OF AGGREGATION
-And the DataFrame has 155 rows.
+The level of aggregation is (sets of) type and subtype.
+
+```{python}
+print(f"And the DataFrame has {len(df_top_alerts_map)} rows.")
+```
+
 
 2. 
 ```{python}
 # Plot the alerts by latitude and longitude for "Jam-Heavy Traffic" cases
-chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
+chart_alerts = alt.Chart(df_top_alerts_map).mark_point(
     color="firebrick",
     filled=True
 ).encode(
@@ -532,7 +548,7 @@ chart_alert = alt.Chart(df_top_alerts_maps).mark_point(
     "datum.updated_type == 'Jam' & datum.updated_subtype == 'Heavy traffic'"
 )
 
-display(chart_alert)
+chart_alerts.show()
 ```
 
 3. 
@@ -556,7 +572,6 @@ with open(path_json, "w") as f:
     json.dump(data, f)
 ```
 <!--Attribution: method ".json" referring to Real Python (https://realpython.com/python-requests/)-->
-
 <!--Attribution: json package referring to Perplexity (https://www.perplexity.ai/search/methods-in-json-package-for-sa-KX2RBtBjTLasvWgV9UzWgw)-->    
 
 b. 
@@ -572,27 +587,26 @@ geo_data = alt.Data(values=chicago_geojson["features"])
 
 ```{python}
 # Create subset
-df_top_alerts_maps_chosen = df_top_alerts_maps[(
-    df_top_alerts_maps["updated_type"] == "Jam"
+df_top_alerts_map_chosen = df_top_alerts_map[(
+    df_top_alerts_map["updated_type"] == "Jam"
 ) & (
-    df_top_alerts_maps["updated_subtype"] == "Heavy traffic"
+    df_top_alerts_map["updated_subtype"] == "Heavy traffic"
 )]
 
 # Set appropriate domain for chosen type and subtype
 domain_1 = [
-    df_top_alerts_maps_chosen["count"].min(),
-    df_top_alerts_maps_chosen["count"].max()
+    df_top_alerts_map_chosen["count"].min(),
+    df_top_alerts_map_chosen["count"].max()
 ]
 
 # Redefine the scatterplot
-chart_alert = alt.Chart(df_top_alerts_maps_chosen).mark_point(
+chart_alerts = alt.Chart(df_top_alerts_map_chosen).mark_point(
     color="firebrick",
     filled=True
 ).encode(
     longitude="longitude:Q",
     latitude="latitude:Q",
     size=alt.Size(
-
         "count:Q",
         scale=alt.Scale(
             domain=domain_1
@@ -619,9 +633,9 @@ chart_map = alt.Chart(geo_data).mark_geoshape(
 
 
 # Overlay the plots
-chart_alert_map = chart_map + chart_alert
+chart_alerts_map = chart_map + chart_alerts
 
-chart_alert_map.show()
+chart_alerts_map.show()
 ```
 
 5. 
@@ -632,31 +646,31 @@ a.
 print_file_contents("./top_alerts_map/app.py")
 ```
 
-![](app1_5a.png){width=200 height=200}
+![](app1_5a.png){width=300 height=300}
 
 There are 16 total combinations.
 
 b. 
 
-![](app1_5b.png){width=200 height=200}
+![](app1_5b.png){width=300 height=300}
 
 c. 
 
-![](app1_5c.png){width=200 height=200}
+![](app1_5c.png){width=300 height=300}
 
-WHERE IS THE MOST???
+North east part of Portage Park neighborhood, which locate on north west part of Chicago.
 
 d. 
 
-FORMULATE QUESTION
+Question: in which area road closure due to construction most commonly observed?
 
-PNG
+![](app1_5d.png){width=300 height=300}
 
-ANSWER
+Answer: West from loop, where large interstates (e.g. I-90/94) is running, which might be under maintenance or rehabilitation.
 
 e. 
 
-ADD WHICH COLUMN?
+One idea is adding "roadType" column to the dashboard, as tooltip for each point. It would suggest in which road in the area the alerts happen, whether primary street or secondary/(standard) street etc, which is useful in answering the previous question I formulated above. The dataset dictionary suggests that the road types include even railroads or pedestrian, so it would be better to include this information to clarify the ratio of road types for each point in the dashboard.
 
 # App #2: Top Location by Alert Type and Hour Dashboard (20 points) {-}
 
@@ -664,7 +678,7 @@ ADD WHICH COLUMN?
 
 a. 
 
-Collapsing the dataset by the column *ts* would be not a good idea. We of course need to subset the dataset based on the information in *ts*, but we need to create a new column, extracting an hour of the day from each value in the column. There, we should remove redundant information, such as year-month-date(irrelevant in our analysis), or minute and seconds (too detailed for input in UI, not requested), or "UTC" (All data in the column are UTC).
+Collapsing the dataset by the column *ts* would be not a good idea. We of course need to subset the dataset based on the information in *ts*, but we need to extract only hours from each value in the column, removing redundant information, such as year-month-date(irrelevant in our analysis), or minute and seconds (too detailed for input in UI, not requested by users), or "UTC" (All data in the column are UTC in this case).
     
 b.  
 ```{python}
@@ -673,47 +687,50 @@ df_waze_updated["hour"] = pd.to_datetime(
     df_waze_updated["ts"].replace("UTC", "")).dt.strftime("%H:00")
 
 # Summarize the df by type, subtype, latitude, longitude and hour
-df_top_alerts_maps_byhour = df_waze_updated.groupby(
+df_top_alerts_map_byhour = df_waze_updated.groupby(
     ["updated_type", "updated_subtype", "longitude", "latitude", "hour"]
 ).size().reset_index().rename(
     columns={0: "count"}
 )
 
 # Group and filter top 10 from the sorted df by hour
-df_top_alerts_maps_byhour = df_top_alerts_maps_byhour.sort_values(
+df_top_alerts_map_byhour = df_top_alerts_map_byhour.sort_values(
     "count",
     ascending=False
 ).groupby(
     ["updated_type", "updated_subtype", "hour"]
 ).head(10).reset_index(drop=True)
 
-df_top_alerts_maps_byhour.to_csv(
+df_top_alerts_map_byhour.to_csv(
     r"top_alerts_map_byhour\top_alerts_map_byhour.csv")
 ```
 
-LEVEL OF AGGREGATION
-It includes 240 rows.
+The level of aggregation is sets of type and subtype, and additionally, hour in this case.
+
+```{python}
+print(f"And the DataFrame has {len(df_top_alerts_map_byhour)} rows.")
+```
 
 c.
 
 ```{python}
 # Create subset
-df_top_alerts_maps_byhour_chosen = df_top_alerts_maps_byhour[(
-    df_top_alerts_maps_byhour["updated_type"] == "Jam"
+df_top_alerts_map_byhour_chosen = df_top_alerts_map_byhour[(
+    df_top_alerts_map_byhour["updated_type"] == "Jam"
 ) & (
-    df_top_alerts_maps_byhour["updated_subtype"] == "Heavy traffic"
+    df_top_alerts_map_byhour["updated_subtype"] == "Heavy traffic"
 ) & (
-    df_top_alerts_maps_byhour["hour"].isin(["10:00", "16:00", "23:00"])
+    df_top_alerts_map_byhour["hour"].isin(["10:00", "16:00", "23:00"])
 )]
 
 # Set appropriate domain for chosen type and subtype
 domain_2 = [
-    df_top_alerts_maps_byhour_chosen["count"].min(),
-    df_top_alerts_maps_byhour_chosen["count"].max()
+    df_top_alerts_map_byhour_chosen["count"].min(),
+    df_top_alerts_map_byhour_chosen["count"].max()
 ]
 
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
-chart_alert = alt.Chart().mark_point(
+chart_alerts = alt.Chart().mark_point(
     color="firebrick",
     filled=True
 ).encode(
@@ -732,14 +749,14 @@ chart_alert = alt.Chart().mark_point(
     width=150
 )
 
-chart_alert_map_byhour = alt.layer(chart_map, chart_alert).facet(
-    data=df_top_alerts_maps_byhour_chosen,
+chart_alerts_map_byhour = alt.layer(chart_map, chart_alerts).facet(
+    data=df_top_alerts_map_byhour_chosen,
     column="hour:N"
 ).properties(
     title="Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number"
 )
 
-chart_alert_map_byhour.show()
+chart_alerts_map_byhour.show()
 ```
     
 
@@ -751,15 +768,23 @@ a.
 print_file_contents("./top_alerts_map_byhour/app.py")
 ```
 
-PNG
+![](app2_2a.png){width=300 height=300}
 
 b. 
 
-PNG
+![](app2_2b_1.png){width=300 height=300}
+
+![](app2_2b_2.png){width=300 height=300}
+
+![](app2_2b_3.png){width=300 height=300}
 
 c. 
 
-PNG*2
+![](app2_2c_1.png){width=300 height=300}
+
+![](app2_2c_2.png){width=300 height=300}
+
+More during night hours. There seems no alerts before 11am, while there are frequent alerts at each night time. Even if there are other factor such as the difference in the amount of traffic between morning and night, the observation above would be strong enough to support my assumption.
 
 # App #3: Top Location by Alert Type and Hour Dashboard (20 points){-}
 
@@ -768,35 +793,34 @@ PNG*2
 
 a. 
 
-COLLAPSING BY RANGE IS GOOD OR NOT??
-We cannot define the range of numbers for format "HH:MM" with ".range()" method. Also, the column "hour" contains strings, thus we cannot get range from chosen hours based on the column. 
+Collapsing the dataset by range of hours would not be a good idea. If do so, the app need to aggregate the dataset internally for each time the slider was moved by the user, which is resource intensive.
 
 b. 
 
 ```{python}
 # Create base column for calculating range of hours
-df_top_alerts_maps_byhour["hour_dt"] = pd.to_datetime(
-    df_top_alerts_maps_byhour["hour"])
-df_top_alerts_maps_byhour["hour_dt"] = [x.time()
-                                        for x in df_top_alerts_maps_byhour["hour_dt"]]
+df_top_alerts_map_byhour["hour_dt"] = pd.to_datetime(
+    df_top_alerts_map_byhour["hour"], format="%H:%M")
+df_top_alerts_map_byhour["hour_dt"] = [x.time()
+                                       for x in df_top_alerts_map_byhour["hour_dt"]]
 
 # Create subset
-df_top_alerts_maps_byhour_range = df_top_alerts_maps_byhour[(
-    df_top_alerts_maps_byhour["updated_type"] == "Jam"
+df_top_alerts_map_byhour_range = df_top_alerts_map_byhour[(
+    df_top_alerts_map_byhour["updated_type"] == "Jam"
 ) & (
-    df_top_alerts_maps_byhour["updated_subtype"] == "Heavy traffic"
+    df_top_alerts_map_byhour["updated_subtype"] == "Heavy traffic"
 ) & (
-    df_top_alerts_maps_byhour["hour_dt"].between(time(6, 0), time(9, 0))
+    df_top_alerts_map_byhour["hour_dt"].between(time(6, 0), time(9, 0))
 )].drop("hour_dt", axis=1).head(10)
 
 # Set appropriate domain for chosen type and subtype
 domain_3 = [
-    df_top_alerts_maps_byhour_range["count"].min(),
-    df_top_alerts_maps_byhour_range["count"].max()
+    df_top_alerts_map_byhour_range["count"].min(),
+    df_top_alerts_map_byhour_range["count"].max()
 ]
 
 # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
-chart_alert = alt.Chart(df_top_alerts_maps_byhour_range).mark_point(
+chart_alerts = alt.Chart(df_top_alerts_map_byhour_range).mark_point(
     color="firebrick",
     filled=True
 ).encode(
@@ -815,12 +839,13 @@ chart_alert = alt.Chart(df_top_alerts_maps_byhour_range).mark_point(
     width=200
 )
 
-chart_alert_map_byhour_range = alt.layer(chart_map, chart_alert).properties(
-    title="Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number"
+chart_alerts_map_byhour_range = alt.layer(chart_map, chart_alerts).properties(
+    title="Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number between 6AM and 9AM"
 )
 
-chart_alert_map_byhour_range.show()
+chart_alerts_map_byhour_range.show()
 ```
+<!--Attribution: parameter "format" refering to Perplexity (https://www.perplexity.ai/search/from-shiny-import-app-render-u-Tt7cqT5WTmeh0z2CLZtU0A)-->
 <!--Attribution: Method ".time()" referring to Perplexity (https://www.perplexity.ai/search/how-to-make-date-time-object-w-bkYUZPR5R.6jqOOnOhDIzw)-->
 <!--Attribution: Method ".between()" referring to Perplexity (https://www.perplexity.ai/search/df-top-alerts-maps-byhour-hour-vtZei4OvTCCm.fD0riMcVg)-->
 
@@ -832,20 +857,32 @@ a.
 print_file_contents("./top_alerts_map_byhour_sliderrange/app.py")
 ```
 
+![](app3_2a.png){width=300 height=300}
+
 b. 
     
+![](app3_2b.png){width=300 height=300}
+
 3. 
 
 a. 
     
-
-b. 
-
 ```{python}
 print_file_contents("./top_alerts_map_byhour_sliderrange/app_switch.py")
 ```
 
+![](app3_3a.png){width=300 height=300}
+
+possible values: True, False
+
+b. 
+
+![](app3_3b_1.png){width=300 height=300}
+
+![](app3_3b_2.png){width=300 height=300}
+
 c. 
 
+The same screenshots as in b.
 
 d.
