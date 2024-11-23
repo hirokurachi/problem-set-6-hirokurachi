@@ -41,7 +41,6 @@ policy." Add your initials to indicate your agreement: \*\*HK\*\*
 
 ```{python}
 #| echo: true
-#| eval: false
 
 def print_file_contents(file_path):
     """Print contents of a file."""
@@ -59,13 +58,9 @@ def print_file_contents(file_path):
         print("```python") 
         print(f"Error reading file: {e}")
         print("```")
-
-print_file_contents("./top_alerts_map_byhour/app.py") # Change accordingly
 ```
 
 ```{python} 
-#| echo: false
-
 # Import required packages.
 import zipfile
 import os
@@ -611,6 +606,10 @@ chart_alert_map.show()
 
 a. 
 
+```{python}
+print_file_contents("./top_alerts_map/app.py")
+```
+
 ![](app1_5a.png){width=200 height=200}
 
 There are 16 total combinations.
@@ -724,6 +723,10 @@ chart_alert_map_byhour.show()
 
 a. 
 
+```{python}
+print_file_contents("./top_alerts_map_byhour/app.py")
+```
+
 PNG
 
 b. 
@@ -799,6 +802,9 @@ chart_alert_map_byhour_range.show()
 
 a. 
 
+```{python}
+print_file_contents("./top_alerts_map_byhour_sliderrange/app.py")
+```
 
 b. 
     
@@ -809,6 +815,9 @@ a.
 
 b. 
 
+```{python}
+print_file_contents("./top_alerts_map_byhour_sliderrange/app_switch.py")
+```
 
 c. 
 
