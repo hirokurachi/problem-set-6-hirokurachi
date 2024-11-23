@@ -73,7 +73,7 @@ import pandas as pd
 import altair as alt 
 alt.renderers.enable("png")
 import pandas as pd
-from datetime import date
+from datetime import date, time
 import numpy as np
 alt.data_transformers.disable_max_rows() 
 import re
@@ -575,6 +575,7 @@ chart_alert = alt.Chart(df_top_alerts_maps_chosen).mark_point(
     longitude = "longitude:Q",
     latitude = "latitude:Q",
     size = alt.Size(
+        
         "count:Q", 
         scale = alt.Scale(
             domain = domain_1
@@ -741,58 +742,55 @@ PNG*2
 a. 
 
 COLLAPSING BY RANGE IS GOOD OR NOT??
-We cannot define the range of numbers for format "HH:MM" with ".range()" method. Currently, the column "hour" contains strings, thus we cannot get range from chosen hours based on the column. And even if we 
+We cannot define the range of numbers for format "HH:MM" with ".range()" method. Also, the column "hour" contains strings, thus we cannot get range from chosen hours based on the column. 
 
 b. 
 
 ```{python}
-# # Create base column for calculating range of hours
-# df_top_alerts_maps_byhour["hour_dt"] = pd.to_datetime(df_top_alerts_maps_byhour["hour"])
-# df_top_alerts_maps_byhour["hour_dt"] = [x.time() for x in df_top_alerts_maps_byhour["hour_dt"]]
+# Create base column for calculating range of hours
+df_top_alerts_maps_byhour["hour_dt"] = pd.to_datetime(df_top_alerts_maps_byhour["hour"])
+df_top_alerts_maps_byhour["hour_dt"] = [x.time() for x in df_top_alerts_maps_byhour["hour_dt"]]
 
-# # Create subset
-# df_top_alerts_maps_byhour_range = df_top_alerts_maps_byhour[(
-#     df_top_alerts_maps_byhour["updated_type"] == "Jam"
-# ) & (
-#     df_top_alerts_maps_byhour["updated_subtype"] == "Heavy traffic"
-# ) & (
-#     df_top_alerts_maps_byhour["hour_dt"].between(time(6, 0), time(9, 0))
-# )]
+# Create subset
+df_top_alerts_maps_byhour_range = df_top_alerts_maps_byhour[(
+    df_top_alerts_maps_byhour["updated_type"] == "Jam"
+) & (
+    df_top_alerts_maps_byhour["updated_subtype"] == "Heavy traffic"
+) & (
+    df_top_alerts_maps_byhour["hour_dt"].between(time(6, 0), time(9, 0))
+)].drop("hour_dt", axis = 1).head(10)
 
-# # Set appropriate domain for chosen type and subtype
-# domain_3 = [
-#     df_top_alerts_maps_byhour_range["count"].min(), 
-#     df_top_alerts_maps_byhour_range["count"].max()
-# ]
+# Set appropriate domain for chosen type and subtype
+domain_3 = [
+    df_top_alerts_maps_byhour_range["count"].min(), 
+    df_top_alerts_maps_byhour_range["count"].max()
+]
 
-# # Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
-# chart_alert = alt.Chart().mark_point(
-#     color = "firebrick",
-#     filled = True
-# ).encode(
-#     longitude = "longitude:Q",
-#     latitude = "latitude:Q",
-#     size = alt.Size(
-#         "count:Q",
-#         scale = alt.Scale(
-#             domain = domain_3
-#         ),  
-#         legend = alt.Legend(
-#             title = "Number of Alerts"
-#         ))
-# ).properties(
-#     height = 200,
-#     width = 200
-# )
+# Plot the alerts by longitude and latitude for "Jam-Heavy Traffic" cases, for 3 timings
+chart_alert = alt.Chart(df_top_alerts_maps_byhour_range).mark_point(
+    color = "firebrick",
+    filled = True
+).encode(
+    longitude = "longitude:Q",
+    latitude = "latitude:Q",
+    size = alt.Size(
+        "count:Q",
+        scale = alt.Scale(
+            domain = domain_3
+        ),  
+        legend = alt.Legend(
+            title = "Number of Alerts"
+        ))
+).properties(
+    height = 200,
+    width = 200
+)
 
-# chart_alert_map_byhour = alt.layer(chart_map, chart_alert).facet(
-#     data = df_top_alerts_maps_byhour_range,
-#     column = "hour:N"
-# ).properties(
-#     title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number"
-# )
+chart_alert_map_byhour_range = alt.layer(chart_map, chart_alert).properties(
+    title = "Top 10 Areas of 'Jam - Heavy Traffic' Alerts Number"
+)
 
-# chart_alert_map_byhour.show()
+chart_alert_map_byhour_range.show()
 ```
 <!--Attribution: Method ".time()" referring to Perplexity (https://www.perplexity.ai/search/how-to-make-date-time-object-w-bkYUZPR5R.6jqOOnOhDIzw)-->
 <!--Attribution: Method ".between()" referring to Perplexity (https://www.perplexity.ai/search/df-top-alerts-maps-byhour-hour-vtZei4OvTCCm.fD0riMcVg)-->
