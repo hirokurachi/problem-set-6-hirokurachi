@@ -26,7 +26,7 @@ We use (`*`) to indicate a problem that we think might be time consuming.
 1. "This submission is my work alone and complies with the 30538 integrity
 policy." Add your initials to indicate your agreement: \*\*HK\*\*
 2. "I have uploaded the names of anyone I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  \*\*HK\*\* (2 point)
-3. Late coins used this pset: \*\*00\*\* Late coins left after submission: \*\*01\*\*
+3. Late coins used this pset: \*\*01\*\* Late coins left after submission: \*\*00\*\*
 
 4. Before starting the problem set, make sure to read and agree to the terms of data usage for the Waze data [here](https://canvas.uchicago.edu/courses/59054/quizzes/130617).
 
@@ -435,8 +435,13 @@ print(
 d.
 
 ```{python}
+# If the crosswalk erroneously contained type or subtype which were different from those in df_waze, the length of df_waze_updated would be longer than that of df_waze
+assert(len(df_waze) == len(df_waze_updated)), "There are row(s) with different value(s) between two df"
 
+print(df_waze_updated.head(1))
 ```
+
+As this code runs without error meessage, we can assure that the crosswalk and the new merged dataset have the same values in type and subttype.
 
 # App #1: Top Location by Alert Type Dashboard (30 points){-}
 
@@ -886,3 +891,19 @@ c.
 The same screenshots as in b.
 
 d.
+
+After creating subset "df_chosen()" (, no difference wheather switch is toggled), create sub-subsets for morning and afternoon observations, by checking if each data in "hour" column are included in ["00:00", "01:00", ... "12:00"] or in ["13:00", "14:00", ... "23:00"].
+
+Then we need to define two distinct plot functions instead of "chart_alerts_byhour()" for corresponding two sub-subsets, with different color parameter in "mark_point()". We need to overlay both of these plots as well as the map plot to render final output.
+
+Also, we need some other necessary fixes on the server side for our app, not complehensive but such as
+
+- fix domain();
+
+    Change the minimum value of domain into zero.
+
+- fix chart_map();
+
+    Change to "fill=None" in mark_geoshape()
+
+, etc.
